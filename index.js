@@ -3,7 +3,6 @@ const pino = require('pino');
 const http = require('http');
 const qrcode = require('qrcode-terminal');
 
-// Web server mini biar Railway tetap aktif
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot WA Minecraft is running!\n');
@@ -15,32 +14,35 @@ async function startBot() {
     
     const sock = makeWASocket({
         logger: pino({ level: 'silent' }),
-        auth: state
+        auth: state,
+        printQRInTerminal: true // Memaksa Baileys print QR langsung ke terminal
     });
 
-    // Menangkap QR Code dan menampilkannya di terminal/log
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
         
         if (qr) {
-            console.log('📌 Scan QR code di bawah ini pakai WhatsApp kamu:');
+            console.log('📌 Scan QR code ini:');
             qrcode.generate(qr, { small: true });
         }
 
         if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Koneksi terputus, mencoba menghubungkan ulang...', shouldReconnect);
-            if (shouldReconnect) {
-                startBot();
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            console.log('Koneksi terputus, status code:', statusCode);
+            
+            // Kalau bukan karena logout, hubungkan ulang
+            if (statusCode !== DisconnectReason.loggedOut) {
+                setTimeout(() => startBot(), 3000);
+            } else {
+                console.log('Perangkat ter-logout, hapus folder sesi.');
             }
         } else if (connection === 'open') {
-            console.log('🚀 Bot WhatsApp Berhasil Terhubung!');
+            console.log('🚀 Bot WhatsApp Berhasil Terhubung ke Server!');
         }
     });
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Menerima pesan masuk
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const m = messages[0];
         if (!m.message || m.key.fromMe) return;
