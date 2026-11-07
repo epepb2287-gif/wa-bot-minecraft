@@ -5,7 +5,7 @@ const http = require('http');
 // Memaksa modul crypto masuk ke global scope agar terbaca oleh Baileys
 global.crypto = require('crypto');
 
-// Web server mini untuk health check Railway (supaya bot aktif 24 jam)
+// Web server mini untuk health check Railway (agar bot tetap aktif 24 jam)
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot WA Minecraft is running!\n');
@@ -25,10 +25,10 @@ async function startBot() {
     if (!sock.authState.creds.registered) {
         const phoneNumber = "6281539875922"; 
         
-        // Beri jeda 6 detik agar koneksi stabil dulu sebelum minta kode
+        // Diperlama jadi 10 detik agar socket benar-benar siap dan tidak kena Precondition Required (428)
         setTimeout(async () => {
             try {
-                console.log("⏳ Sedang meminta kode pairing dari server WhatsApp...");
+                console.log("⏳ Menghubungkan ke server WhatsApp untuk mengambil kode pairing...");
                 let code = await sock.requestPairingCode(phoneNumber);
                 code = code?.match(/.{1,4}/g)?.join("-") || code;
                 console.log(`\n========================================`);
@@ -37,7 +37,7 @@ async function startBot() {
             } catch (err) {
                 console.log("Gagal meminta kode pairing:", err);
             }
-        }, 6000);
+        }, 10000);
     }
 
     sock.ev.on('connection.update', (update) => {
@@ -47,14 +47,13 @@ async function startBot() {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             console.log('Koneksi terputus, status code:', statusCode);
             
-            // Jangan reconnect kalau sudah terhubung sukses atau logged out
             if (statusCode !== DisconnectReason.loggedOut) {
-                setTimeout(() => startBot(), 15000); // Jeda 15 detik agar HP dan server tidak overheat
+                setTimeout(() => startBot(), 10000);
             } else {
                 console.log('Perangkat ter-logout dari WhatsApp.');
             }
         } else if (connection === 'open') {
-            console.log('🚀 Bot WhatsApp Berhasil Terhubung Sepenuhnya dan Siap Digunakan!');
+            console.log('🚀 Bot WhatsApp Berhasil Terhubung Sepenuhnya!');
         }
     });
 
@@ -104,4 +103,4 @@ async function startBot() {
 }
 
 startBot();
-        
+               
