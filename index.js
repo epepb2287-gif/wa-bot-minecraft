@@ -5,7 +5,7 @@ const http = require('http');
 // Memaksa modul crypto masuk ke global scope agar terbaca oleh Baileys
 global.crypto = require('crypto');
 
-// Web server mini untuk health check Railway
+// Web server mini untuk health check Railway (supaya bot aktif 24 jam)
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot WA Minecraft is running!\n');
@@ -21,11 +21,14 @@ async function startBot() {
         browser: ["Ubuntu", "Chrome", "20.0.0"]
     });
 
+    // Cek apakah perangkat sudah terdaftar atau belum
     if (!sock.authState.creds.registered) {
         const phoneNumber = "6281539875922"; 
         
+        // Beri jeda 6 detik agar koneksi stabil dulu sebelum minta kode
         setTimeout(async () => {
             try {
+                console.log("⏳ Sedang meminta kode pairing dari server WhatsApp...");
                 let code = await sock.requestPairingCode(phoneNumber);
                 code = code?.match(/.{1,4}/g)?.join("-") || code;
                 console.log(`\n========================================`);
@@ -34,7 +37,7 @@ async function startBot() {
             } catch (err) {
                 console.log("Gagal meminta kode pairing:", err);
             }
-        }, 4000);
+        }, 6000);
     }
 
     sock.ev.on('connection.update', (update) => {
@@ -44,17 +47,20 @@ async function startBot() {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             console.log('Koneksi terputus, status code:', statusCode);
             
+            // Jangan reconnect kalau sudah terhubung sukses atau logged out
             if (statusCode !== DisconnectReason.loggedOut) {
-                setTimeout(() => startBot(), 5000);
+                setTimeout(() => startBot(), 15000); // Jeda 15 detik agar HP dan server tidak overheat
+            } else {
+                console.log('Perangkat ter-logout dari WhatsApp.');
             }
         } else if (connection === 'open') {
-            console.log('🚀 Bot WhatsApp Berhasil Terhubung Sepenuhnya!');
+            console.log('🚀 Bot WhatsApp Berhasil Terhubung Sepenuhnya dan Siap Digunakan!');
         }
     });
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Fitur pesan / command !village
+    // Fitur pesan / command !village pencari koordinat Minecraft
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const m = messages[0];
         if (!m.message || m.key.fromMe) return;
@@ -98,4 +104,4 @@ async function startBot() {
 }
 
 startBot();
-            
+        
