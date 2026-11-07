@@ -1,7 +1,9 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const http = require('http');
-const crypto = require('crypto'); // <-- INI YANG KURANG TADI
+
+// Memaksa modul crypto masuk ke global scope agar terbaca oleh Baileys
+global.crypto = require('crypto');
 
 // Web server mini untuk health check Railway
 const server = http.createServer((req, res) => {
