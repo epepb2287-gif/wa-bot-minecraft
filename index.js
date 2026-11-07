@@ -3,7 +3,7 @@ const pino = require('pino');
 const http = require('http');
 
 // Memaksa modul crypto masuk ke global scope agar terbaca oleh Baileys
-global.crypto = require('crypto');
+Global.crypto = require('crypto');
 
 // Web server mini untuk health check Railway (agar bot tetap aktif 24 jam)
 const server = http.createServer((req, res) => {
