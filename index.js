@@ -1,8 +1,8 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const http = require('http');
-const qrcode = require('qrcode-terminal');
 
+// Web server mini untuk health check Railway
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot WA Minecraft is running!\n');
@@ -15,31 +15,47 @@ async function startBot() {
     const sock = makeWASocket({
         logger: pino({ level: 'silent' }),
         auth: state,
-        printQRInTerminal: true // Memaksa Baileys print QR langsung ke terminal
+        browser: ["Ubuntu", "Chrome", "20.0.0"] // Menyamar browser agar tidak diblokir WA
     });
 
-        sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
+    // Jika belum ada pairing, minta kode pairing menggunakan nomor WhatsApp kamu
+    if (!sock.authState.creds.registered) {
+        // Ganti nomor di bawah dengan nomor WhatsApp bot kamu (awali dengan 62 tanpa angka 0 di depan, contoh: 628123456789)
+        const phoneNumber = "6281539875922"; 
         
-        if (qr) {
-            console.log('QR_CODE_STRING:', qr);
-            qrcode.generate(qr, { small: true });
-        }
+        setTimeout(async () => {
+            try {
+                let code = await sock.requestPairingCode(phoneNumber);
+                code = code?.match(/.{1,4}/g)?.join("-") || code;
+                console.log(`\n========================================`);
+                console.log(`📌 KODE PAIRING WHATSAPP KAMU: ${code}`);
+                console.log(`========================================\n`);
+            } catch (err) {
+                console.log("Gagal meminta kode pairing:", err);
+            }
+        }, 3000);
+    }
 
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
+        
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             console.log('Koneksi terputus, status code:', statusCode);
             
             if (statusCode !== DisconnectReason.loggedOut) {
                 setTimeout(() => startBot(), 5000);
+            } else {
+                console.log('Perangkat ter-logout.');
             }
         } else if (connection === 'open') {
-            console.log('🚀 Bot WhatsApp Berhasil Terhubung ke Server!');
+            console.log('🚀 Bot WhatsApp Berhasil Terhubung Sepenuhnya!');
         }
-    });                
+    });
 
     sock.ev.on('creds.update', saveCreds);
 
+    // Fitur pesan / command !village
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const m = messages[0];
         if (!m.message || m.key.fromMe) return;
@@ -54,7 +70,7 @@ async function startBot() {
 
         const senderJid = m.key.remoteJid;
 
-        if (body.startsWith('!village')) {
+        if (body && body.startsWith('!village')) {
             const parts = body.trim().split(/\s+/);
             let replyText = "Format salah, Bro! Gunakan: `!village <seed> <x> <z>`";
 
@@ -83,3 +99,4 @@ async function startBot() {
 }
 
 startBot();
+            
