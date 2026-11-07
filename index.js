@@ -1,8 +1,9 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const http = require('http');
+const qrcode = require('qrcode-terminal');
 
-// Web server mini agar Render / UptimeRobot bisa mendeteksi bot tetap aktif
+// Web server mini biar Railway tetap aktif
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot WA Minecraft is running!\n');
@@ -17,8 +18,15 @@ async function startBot() {
         auth: state
     });
 
+    // Menangkap QR Code dan menampilkannya di terminal/log
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection, lastDisconnect, qr } = update;
+        
+        if (qr) {
+            console.log('📌 Scan QR code di bawah ini pakai WhatsApp kamu:');
+            qrcode.generate(qr, { small: true });
+        }
+
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect.error)?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log('Koneksi terputus, mencoba menghubungkan ulang...', shouldReconnect);
@@ -32,6 +40,7 @@ async function startBot() {
 
     sock.ev.on('creds.update', saveCreds);
 
+    // Menerima pesan masuk
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const m = messages[0];
         if (!m.message || m.key.fromMe) return;
@@ -75,4 +84,3 @@ async function startBot() {
 }
 
 startBot();
-  
