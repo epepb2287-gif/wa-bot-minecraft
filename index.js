@@ -1,6 +1,7 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const http = require('http');
+const crypto = require('crypto'); // <-- INI YANG KURANG TADI
 
 // Web server mini untuk health check Railway
 const server = http.createServer((req, res) => {
@@ -15,12 +16,10 @@ async function startBot() {
     const sock = makeWASocket({
         logger: pino({ level: 'silent' }),
         auth: state,
-        browser: ["Ubuntu", "Chrome", "20.0.0"] // Menyamar browser agar tidak diblokir WA
+        browser: ["Ubuntu", "Chrome", "20.0.0"]
     });
 
-    // Jika belum ada pairing, minta kode pairing menggunakan nomor WhatsApp kamu
     if (!sock.authState.creds.registered) {
-        // Ganti nomor di bawah dengan nomor WhatsApp bot kamu (awali dengan 62 tanpa angka 0 di depan, contoh: 628123456789)
         const phoneNumber = "6281539875922"; 
         
         setTimeout(async () => {
@@ -33,7 +32,7 @@ async function startBot() {
             } catch (err) {
                 console.log("Gagal meminta kode pairing:", err);
             }
-        }, 3000);
+        }, 4000);
     }
 
     sock.ev.on('connection.update', (update) => {
@@ -45,8 +44,6 @@ async function startBot() {
             
             if (statusCode !== DisconnectReason.loggedOut) {
                 setTimeout(() => startBot(), 5000);
-            } else {
-                console.log('Perangkat ter-logout.');
             }
         } else if (connection === 'open') {
             console.log('🚀 Bot WhatsApp Berhasil Terhubung Sepenuhnya!');
@@ -99,4 +96,4 @@ async function startBot() {
 }
 
 startBot();
-            
+                    
