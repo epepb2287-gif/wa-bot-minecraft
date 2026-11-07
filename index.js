@@ -18,11 +18,11 @@ async function startBot() {
         printQRInTerminal: true // Memaksa Baileys print QR langsung ke terminal
     });
 
-    sock.ev.on('connection.update', (update) => {
+        sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
         
         if (qr) {
-            console.log('📌 Scan QR code ini:');
+            console.log('QR_CODE_STRING:', qr);
             qrcode.generate(qr, { small: true });
         }
 
@@ -30,16 +30,13 @@ async function startBot() {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             console.log('Koneksi terputus, status code:', statusCode);
             
-            // Kalau bukan karena logout, hubungkan ulang
             if (statusCode !== DisconnectReason.loggedOut) {
-                setTimeout(() => startBot(), 3000);
-            } else {
-                console.log('Perangkat ter-logout, hapus folder sesi.');
+                setTimeout(() => startBot(), 5000);
             }
         } else if (connection === 'open') {
             console.log('🚀 Bot WhatsApp Berhasil Terhubung ke Server!');
         }
-    });
+    });                
 
     sock.ev.on('creds.update', saveCreds);
 
